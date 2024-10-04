@@ -12,7 +12,7 @@ public class MessageController {
     @MessageMapping("/chat.sendMessage/{roomId}")
     @SendTo("/topic/chat/{roomId}")
     public MessageDto sendMessage(MessageDto message) {
-        // Logic for sending messages
+        
         return message;
     }
 }

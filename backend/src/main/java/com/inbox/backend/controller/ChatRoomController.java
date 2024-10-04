@@ -19,7 +19,7 @@ public class ChatRoomController {
         this.chatRoomService = chatRoomService;
     }
 
-    // API to register a user in a chat room
+    
     @PostMapping("/register")
     public ResponseEntity<String> registerUser(@RequestBody Map<String, String> payload) {
         String roomId = payload.get("roomId");
@@ -37,7 +37,4 @@ public class ChatRoomController {
     public ResponseEntity<?> handlePreflight() {
         return ResponseEntity.ok().build();
     }
-
-
-    // Other endpoints (e.g., checking if a user is in a room, etc.)
 }
