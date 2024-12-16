@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Chat Room</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        #chat {
+            width: 80%;
+            max-width: 600px;
+            height: 300px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            overflow-y: scroll;
+            padding: 15px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        #message {
+            width: 80%;
+            max-width: 500px;
+            padding: 10px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .message {
+            padding: 8px;
+            border-radius: 5px;
+            margin-bottom: 8px;
+            background-color: #f1f1f1;
+        }
+
+        .join,
+        .leave {
+            font-style: italic;
+            color: #555;
+        }
+
+        .chat-message {
+            background-color: #e1f5fe;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+
+        .chat-message.sender {
+            background-color: #e8f5e9;
+        }
+
+        .chat-message.receiver {
+            background-color: #fff3e0;
+        }
+    </style>
+    <script>
+        let stompClient = null;
+        let username = null;
+
+        function connect() {
+            username = new URLSearchParams(window.location.search).get('username');
+            if (!username) {
+                alert("Invalid access. Please enter your name first.");
+                window.location.href = "/";
+                return;
+            }
+
+            const socket = new SockJS('http://localhost:8080/ws');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function (frame) {
+                document.getElementById("chat").innerHTML += `<p>Connected as ${username}</p>`;
+                stompClient.subscribe('/topic/public', function (message) {
+                    showMessage(JSON.parse(message.body));
+                });
+                stompClient.send("/app/ws.register", {}, JSON.stringify({
+                    sender: username,
+                    type: 'JOIN'
+                }));
+            });
+        }
+
+        function sendMessage() {
+            const messageContent = document.getElementById("message").value.trim();
+            if (messageContent && stompClient) {
+                try {
+                    stompClient.send("/topic/public", {}, JSON.stringify({
+                        sender: username,
+                        content: messageContent,
+                        type: 'CHAT'
+                    }));
+                    document.getElementById("message").value = ""; // Clear the input field
+                } catch (error) {
+                    console.error("Message sending failed:", error); // Log any errors for debugging
+                }
+            } else {
+                console.log("Message content is empty or stompClient is not initialized");
+            }
+        }
+
+        function showMessage(message) {
+            const chat = document.getElementById("chat");
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+
+            if (message.type === 'JOIN') {
+                messageElement.classList.add('join');
+                messageElement.textContent = `${message.sender} joined the chat.`;
+            } else if (message.type === 'LEAVE') {
+                messageElement.classList.add('leave');
+                messageElement.textContent = `${message.sender} left the chat.`;
+            } else {
+                const chatMessage = document.createElement('div');
+                chatMessage.classList.add('chat-message');
+                chatMessage.classList.add(message.sender === username ? 'sender' : 'receiver');
+                chatMessage.textContent = `${message.sender}: ${message.content}`;
+                messageElement.appendChild(chatMessage);
+            }
+
+            chat.appendChild(messageElement);
+            chat.scrollTop = chat.scrollHeight; // Scroll to the bottom
+        }
+
+        window.addEventListener("load", connect);
+    </script>
+</head>
+
+<body>
+    <h1>Chat Room</h1>
+    <div id="chat"></div>
+    <input type="text" id="message" placeholder="Type a message">
+    <button onclick="sendMessage()">Send</button>
+</body>
+
+</html>
